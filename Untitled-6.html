@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <title>打地鼠小游戏</title>
+  <style>
+    body {
+      background-color: #228B22; /* 森林绿色背景 */
+      background-size: cover;
+      background-position: center;
+      cursor: url('pic/touxiang/微信图片_20250423193611.png'), auto;
+      min-height: 100vh;
+    }
+
+    .hole {
+      width: 100px;
+      height: 100px;
+      background-color: #8B4513;
+      border-radius: 50%;
+      margin: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mole {
+      width: 80px;
+      height: 80px;
+      background-size: cover;
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      transition: top 0.3s ease;
+      cursor: pointer;
+    }
+
+    .mole.up {
+      top: 10%;
+    }
+
+    .mole.hit {
+      animation: hitAnimation 0.3s ease;
+    }
+
+    @keyframes hitAnimation {
+      0% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(0.8); }
+      100% { transform: translateX(-50%) scale(1); }
+    }
+  </style>
+</head>
+
+<body class="flex flex-col items-center justify-center text-white p-4">
+  <h1 class="text-3xl font-bold mb-4 drop-shadow">打地鼠小游戏</h1>
+
+  <!-- 难度选择 -->
+  <div class="mb-4 flex gap-2">
+    <button onclick="setDifficulty('easy')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded">简单</button>
+    <button onclick="setDifficulty('medium')" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded">中等</button>
+    <button onclick="setDifficulty('hard')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded">困难</button>
+  </div>
+
+  <div id="score" class="text-2xl mb-2">得分: 0</div>
+  <div id="timer" class="text-2xl mb-4">剩余时间: 60 秒</div>
+
+  <!-- 地鼠洞 -->
+  <div class="grid grid-cols-3 gap-4">
+    <div class="hole"><div class="mole"></div></div>
+    <div class="hole"><div class="mole"></div></div>
+    <div class="hole"><div class="mole"></div></div>
+    <div class="hole"><div class="mole"></div></div>
+    <div class="hole"><div class="mole"></div></div>
+    <div class="hole"><div class="mole"></div></div>
+    <div class="hole"><div class="mole"></div></div>
+    <div class="hole"><div class="mole"></div></div>
+    <div class="hole"><div class="mole"></div></div>
+  </div>
+
+  <!-- 开始按钮 -->
+  <button onclick="startGame()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">开始游戏</button>
+
+  <!-- 音效 -->
+  <audio id="normalSound" src="https://www.myinstants.com/media/sounds/hit-sound.mp3"></audio>
+  <audio id="goldSound" src="https://www.myinstants.com/media/sounds/coin.mp3"></audio>
+  <audio id="bombSound" src="https://www.myinstants.com/media/sounds/explosion.mp3"></audio>
+
+  <!-- 排行榜 -->
+  <div class="mt-6 w-64 bg-white bg-opacity-80 p-4 rounded text-black">
+    <h2 class="text-xl font-bold">历史最高分</h2>
+    <ul id="highScores" class="list-disc pl-5 mt-2"></ul>
+  </div>
+
+  <script>
+    const holes = document.querySelectorAll('.hole');
+    const moles = document.querySelectorAll('.mole');
+    const scoreBoard = document.getElementById('score');
+    const timerDisplay = document.getElementById('timer');
+    const normalSound = document.getElementById('normalSound');
+    const goldSound = document.getElementById('goldSound');
+    const bombSound = document.getElementById('bombSound');
+
+    let score = 0;
+    let timeUp = false;
+    let timer;
+    let difficulty = 'medium';
+
+    const difficultySettings = {
+      easy: { min: 800, max: 1500 },
+      medium: { min: 400, max: 1000 },
+      hard: { min: 200, max: 600 }
+    };
+
+    const moleImages = {
+      normal: 'https://img-blog.csdnimg.cn/f6521fe411534887bce0c02ec2498e9f.png',
+      gold: 'https://img.icons8.com/color/96/000000/hamster.png',
+      bomb: 'https://img.icons8.com/emoji/96/bomb-emoji.png'
+    };
+
+    function setDifficulty(level) {
+      difficulty = level;
+      alert(`已设置为${level === 'easy' ? '简单' : level === 'medium' ? '中等' : '困难'}模式`);
+    }
+
+    function randomTime(min, max) {
+      return Math.round(Math.random() * (max - min) + min);
+    }
+
+    function randomHole() {
+      const idx = Math.floor(Math.random() * holes.length);
+      return holes[idx].querySelector('.mole');
+    }
+
+    function randomMoleType() {
+      const rand = Math.random();
+      if (rand < 0.1) return 'bomb';
+      if (rand < 0.3) return 'gold';
+      return 'normal';
+    }
+
+    function peep() {
+      const { min, max } = difficultySettings[difficulty];
+      const time = randomTime(min, max);
+      const mole = randomHole();
+      const type = randomMoleType();
+      mole.setAttribute('data-type', type);
+      mole.style.backgroundImage = `url('${moleImages[type]}')`;
+
+      mole.classList.add('up');
+      setTimeout(() => {
+        mole.classList.remove('up');
+        mole.removeAttribute('data-type');
+      }, time);
+
+      if (!timeUp) setTimeout(peep, time * 0.8);
+    }
+
+    function startGame() {
+      score = 0;
+      timeUp = false;
+      scoreBoard.textContent = '得分: 0';
+      let timeLeft = 60;
+      peep();
+
+      timerDisplay.textContent = `剩余时间: ${timeLeft} 秒`;
+      timer = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `剩余时间: ${timeLeft} 秒`;
+        if (timeLeft < 0) {
+          clearInterval(timer);
+          timeUp = true;
+          alert(`游戏结束！你得了 ${score} 分`);
+          saveHighScore(score);
+        }
+      }, 1000);
+    }
+
+    moles.forEach(mole => {
+      mole.addEventListener('click', function () {
+        if (!mole.classList.contains('up')) return;
+
+        const type = mole.getAttribute('data-type') || 'normal';
+
+        mole.classList.remove('up');
+        mole.classList.add('hit');
+
+        if (type === 'normal') {
+          score += 1;
+          playSound(normalSound);
+        } else if (type === 'gold') {
+          score += 2;
+          playSound(goldSound);
+        } else if (type === 'bomb') {
+          score -= 1;
+          playSound(bombSound);
+        }
+
+        scoreBoard.textContent = `得分: ${score}`;
+        setTimeout(() => mole.classList.remove('hit'), 300);
+      });
+    });
+
+    function playSound(sound) {
+      sound.pause();
+      sound.currentTime = 0;
+      sound.play().catch(err => console.warn('音效播放失败:', err));
+    }
+
+    function saveHighScore(score) {
+      const scores = JSON.parse(localStorage.getItem('highScores')) || [];
+      scores.push(score);
+      scores.sort((a, b) => b - a);
+      if (scores.length > 5) scores.length = 5;
+      localStorage.setItem('highScores', JSON.stringify(scores));
+      displayHighScores();
+    }
+
+    function displayHighScores() {
+      const scores = JSON.parse(localStorage.getItem('highScores')) || [];
+      const list = document.getElementById('highScores');
+      list.innerHTML = '';
+      scores.forEach((score, i) => {
+        const li = document.createElement('li');
+        li.textContent = `第${i + 1}名: ${score}分`;
+        list.appendChild(li);
+      });
+    }
+
+    window.onload = displayHighScores;
+  </script>
+</body>
+</html>
